@@ -14,43 +14,80 @@ _tts = None
 VOICE_SAMPLE = os.path.join(os.path.dirname(__file__), "..", "assets", "my_voice.wav")
 
 
-def _load_model() -> TTS:
+def _load_model():
     global _tts
     if _tts is None:
-        _tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2")
+        from TTS.tts.configs.xtts_config import XttsConfig
+        from TTS.tts.models.xtts import Xtts
+        config = XttsConfig()
+        config.load_json(
+            os.path.expanduser(
+                "~/Library/Application Support/tts/tts_models--multilingual--multi-dataset--xtts_v2/config.json"
+            )
+        )
+        _tts = Xtts.init_from_config(config)
+        _tts.load_checkpoint(
+            config,
+            checkpoint_dir=os.path.expanduser(
+                "~/Library/Application Support/tts/tts_models--multilingual--multi-dataset--xtts_v2"
+            ),
+            eval=True,
+        )
     return _tts
 
 
 def text_to_speech(text: str, output_path: str = None) -> str:
-    """
-    Convert text to speech using your cloned voice.
-
-    Args:
-        text        : Text to speak.
-        output_path : Where to save the .wav file.
-                      If None, a temp file is created.
-
-    Returns:
-        Path to the generated .wav audio file.
-    """
     if not os.path.exists(VOICE_SAMPLE):
-        raise FileNotFoundError(
-            f"Voice sample not found at {VOICE_SAMPLE}. "
-            "Make sure assets/my_voice.m4a exists."
-        )
+        raise FileNotFoundError(f"Voice sample not found at {VOICE_SAMPLE}.")
 
     if output_path is None:
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
         output_path = tmp.name
         tmp.close()
 
-    tts = _load_model()
+    import torch
+    import torchaudio
 
-    tts.tts_to_file(
-        text=text,
-        speaker_wav=VOICE_SAMPLE,
-        language="en",
-        file_path=output_path,
+    model = _load_model()
+
+    gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(
+        audio_path=[VOICE_SAMPLE]
     )
+
+    # Split text into sentences to stay under 400 token limit
+    import re
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+
+    # Group sentences into chunks of max ~200 chars
+    chunks = []
+    current = ""
+    for sentence in sentences:
+        if len(current) + len(sentence) < 200:
+            current += " " + sentence
+        else:
+            if current:
+                chunks.append(current.strip())
+            current = sentence
+    if current:
+        chunks.append(current.strip())
+
+    # Generate audio for each chunk
+    wav_chunks = []
+    for chunk in chunks:
+        out = model.inference(
+            text=chunk,
+            language="en",
+            gpt_cond_latent=gpt_cond_latent,
+            speaker_embedding=speaker_embedding,
+            temperature=0.3,
+            repetition_penalty=5.0,
+            top_k=50,
+            top_p=0.85,
+        )
+        wav_chunks.append(torch.tensor(out["wav"]))
+
+    # Concatenate all chunks into one audio file
+    full_wav = torch.cat(wav_chunks, dim=0).unsqueeze(0)
+    torchaudio.save(output_path, full_wav, 24000)
 
     return output_path
