@@ -1,24 +1,32 @@
 # ⚡ Summalyze
+
 Drop a YouTube URL or audio file. Get the gist. No fluff.
 
-## Live Demo
-https://summalyze-yt.streamlit.app/
+🔗 **Live App:** [summalyze-yt.streamlit.app](https://summalyze-yt.streamlit.app/)
+
+---
+
+### App Interface
+![Summalyze App](./assets/screenshots/app_screenshot.png)
+
+---
 
 ## Features
-- 🎬 YouTube URL summarization (local only)
-- 🎙️ Audio file upload summarization (cloud + local)
+- 🎬 YouTube URL summarization (via transcript API)
+- 🎙️ Audio file upload summarization
 - 🔊 Summary read back as audio
 
 ## Stack
 | Layer | Tool |
 |---|---|
-| Audio download | yt-dlp |
+| Transcript fetch | youtube-transcript-api |
 | Transcription | Whisper (local) |
 | Summarization | Groq / llama-3.1-8b |
 | Text-to-speech | gTTS |
 | UI | Streamlit |
 
 ## Run locally
-- pip install -r requirements.txt
-
-- streamlit run app.py
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
