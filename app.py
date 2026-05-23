@@ -1,9 +1,12 @@
 import streamlit as st
 import os
 import tempfile
+from dotenv import load_dotenv
 from utils.transcriber import transcribe_audio
 from utils.summarizer import summarize_transcript
 from utils.downloader import download_audio
+
+load_dotenv()
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -202,7 +205,7 @@ def render_summary(audio_path: str, title: str, duration_sec: int = 0):
         audio_bytes = f.read()
 
     st.markdown('<div class="step-label">▸ listen to summary</div>', unsafe_allow_html=True)
-    st.audio(audio_bytes, format="audio/wav")
+    st.audio(audio_bytes, format="audio/mp3")
 
     with st.expander("view full transcript"):
         st.text_area("", transcript, height=280, label_visibility="collapsed")

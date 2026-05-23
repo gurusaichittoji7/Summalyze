@@ -4,6 +4,7 @@ __pycache__/
 venv/
 *.mp3
 *.wav
+!assets/my_voice.wav
 *.m4a
 .env
 .DS_Store

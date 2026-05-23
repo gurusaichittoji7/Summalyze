@@ -1,17 +1,24 @@
 """
 utils/summarizer.py
-Summarizes a transcript using a local Ollama model (llama3.2).
-Requires Ollama to be running: https://ollama.com
+Summarizes a transcript using Groq API (llama3 hosted).
 """
 
-import requests
+import os
+from groq import Groq
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-DEFAULT_MODEL = "llama3.2"
 MAX_CHARS = 12_000
 
 
-def summarize_transcript(transcript: str, video_title: str = "", model: str = DEFAULT_MODEL) -> str:
+def summarize_transcript(transcript: str, video_title: str = "") -> str:
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise EnvironmentError(
+            "GROQ_API_KEY is not set. "
+            "Add it to your .env file or Streamlit secrets."
+        )
+
+    client = Groq(api_key=api_key)
+
     truncated = transcript[:MAX_CHARS]
     if len(transcript) > MAX_CHARS:
         truncated += "\n\n[Transcript truncated]"
@@ -27,29 +34,10 @@ def summarize_transcript(transcript: str, video_title: str = "", model: str = DE
         "Plain paragraph only — no bullet points, no headers."
     )
 
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-    }
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=512,
+    )
 
-    try:
-        response = requests.post(OLLAMA_URL, json=payload, timeout=120)
-        response.raise_for_status()
-    except requests.exceptions.ConnectionError:
-        raise ConnectionError(
-            "Could not connect to Ollama. "
-            "Make sure Ollama is running: ollama serve"
-        )
-    except requests.exceptions.Timeout:
-        raise RuntimeError("Ollama request timed out.")
-    except requests.exceptions.HTTPError as e:
-        raise RuntimeError(f"Ollama HTTP error: {e}")
-
-    data = response.json()
-    summary: str = data.get("response", "").strip()
-
-    if not summary:
-        raise RuntimeError("Ollama returned an empty response. Is the model pulled?")
-
-    return summary
+    return response.choices[0].message.content.strip()
