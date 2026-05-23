@@ -3,3 +3,5 @@ openai-whisper>=20231117
 yt-dlp>=2024.1.0
 requests>=2.31.0
 python-dotenv>=1.0.0
+groq>=0.9.0
+gtts>=2.5.0
