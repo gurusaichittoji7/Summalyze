@@ -229,28 +229,51 @@ with tab1:
         if not url.strip():
             st.warning("Please enter a YouTube URL.")
         else:
-            import socket
-            # Detect if running on cloud
-            is_cloud = os.getenv("HOME") == "/home/appuser" or "streamlit" in socket.gethostname().lower()
+            try:
+                # Try transcript API first (works on cloud)
+                st.markdown('<div class="step-label">▸ step 01 — fetching transcript</div>', unsafe_allow_html=True)
+                with st.spinner("Fetching YouTube captions…"):
+                    from utils.transcript_fetcher import fetch_transcript
+                    transcript, video_id = fetch_transcript(url)
+                st.success(f"✓ Transcript fetched")
 
-            if is_cloud:
-                st.warning(
-                    "⚠️ YouTube downloading is disabled on the cloud version due to platform restrictions. "
-                    "Use the 🎙️ Audio File tab to upload an audio file instead, or run the app locally for full YouTube support."
+                st.markdown(
+                    f'<div class="meta-row">'
+                    f'<span class="meta-pill">📝 {len(transcript.split()):,} words</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
                 )
-            else:
-                audio_path = None
-                try:
-                    st.markdown('<div class="step-label">▸ step 00 — downloading audio</div>', unsafe_allow_html=True)
-                    with st.spinner("Fetching audio from YouTube…"):
-                        audio_path, video_title, duration_sec = download_audio(url)
-                    st.success(f"✓  {video_title}")
-                    render_summary(audio_path, video_title, duration_sec)
-                except Exception as e:
-                    st.error(f"Error: {e}")
-                finally:
-                    if audio_path and os.path.exists(audio_path):
-                        os.remove(audio_path)
+
+                # Summarize
+                st.markdown('<div class="step-label">▸ step 02 — summarizing</div>', unsafe_allow_html=True)
+                with st.spinner("Summarizing…"):
+                    summary = summarize_transcript(transcript, "")
+
+                st.markdown(
+                    f'<div class="summary-outer">'
+                    f'<div class="summary-header">⚡ summary</div>'
+                    f'<div class="summary-body">{summary}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+                # TTS
+                st.markdown('<div class="step-label">▸ step 03 — generating audio</div>', unsafe_allow_html=True)
+                with st.spinner("Converting summary to audio…"):
+                    from utils.tts import text_to_speech
+                    tts_path = text_to_speech(summary)
+
+                with open(tts_path, "rb") as f:
+                    audio_bytes = f.read()
+
+                st.markdown('<div class="step-label">▸ listen to summary</div>', unsafe_allow_html=True)
+                st.audio(audio_bytes, format="audio/mp3")
+
+                with st.expander("view full transcript"):
+                    st.text_area("", transcript, height=280, label_visibility="collapsed")
+
+            except Exception as e:
+                st.error(f"Error: {e}")
 
 # ── Tab 2: Audio File ─────────────────────────────────────────────────────────
 with tab2:
