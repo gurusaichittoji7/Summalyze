@@ -229,18 +229,28 @@ with tab1:
         if not url.strip():
             st.warning("Please enter a YouTube URL.")
         else:
-            audio_path = None
-            try:
-                st.markdown('<div class="step-label">▸ step 00 — downloading audio</div>', unsafe_allow_html=True)
-                with st.spinner("Fetching audio from YouTube…"):
-                    audio_path, video_title, duration_sec = download_audio(url)
-                st.success(f"✓  {video_title}")
-                render_summary(audio_path, video_title, duration_sec)
-            except Exception as e:
-                st.error(f"Error: {e}")
-            finally:
-                if audio_path and os.path.exists(audio_path):
-                    os.remove(audio_path)
+            import socket
+            # Detect if running on cloud
+            is_cloud = os.getenv("HOME") == "/home/appuser" or "streamlit" in socket.gethostname().lower()
+
+            if is_cloud:
+                st.warning(
+                    "⚠️ YouTube downloading is disabled on the cloud version due to platform restrictions. "
+                    "Use the 🎙️ Audio File tab to upload an audio file instead, or run the app locally for full YouTube support."
+                )
+            else:
+                audio_path = None
+                try:
+                    st.markdown('<div class="step-label">▸ step 00 — downloading audio</div>', unsafe_allow_html=True)
+                    with st.spinner("Fetching audio from YouTube…"):
+                        audio_path, video_title, duration_sec = download_audio(url)
+                    st.success(f"✓  {video_title}")
+                    render_summary(audio_path, video_title, duration_sec)
+                except Exception as e:
+                    st.error(f"Error: {e}")
+                finally:
+                    if audio_path and os.path.exists(audio_path):
+                        os.remove(audio_path)
 
 # ── Tab 2: Audio File ─────────────────────────────────────────────────────────
 with tab2:
