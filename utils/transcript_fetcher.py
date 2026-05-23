@@ -22,24 +22,12 @@ def get_video_id(url: str) -> str:
 
 
 def fetch_transcript(url: str) -> tuple[str, str]:
-    """
-    Fetch transcript from YouTube captions.
-
-    Args:
-        url: YouTube video URL.
-
-    Returns:
-        Tuple of (transcript_text, video_id).
-
-    Raises:
-        ValueError: If video ID can't be extracted.
-        RuntimeError: If transcript is not available.
-    """
     video_id = get_video_id(url)
 
     try:
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
-        transcript = " ".join([t["text"] for t in transcript_list])
+        ytt_api = YouTubeTranscriptApi()
+        fetched = ytt_api.fetch(video_id)
+        transcript = " ".join([t.text for t in fetched])
         return transcript, video_id
     except Exception as e:
         raise RuntimeError(
