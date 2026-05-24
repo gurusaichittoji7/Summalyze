@@ -2,8 +2,7 @@
 
 Drop a YouTube URL or audio file. Get the gist. No fluff.
 
-🔗 **Live App:** [summalyze-yt.streamlit.app](https://summalyze-yt.streamlit.app/)
-
+🔗 **Live App:** (https://summalyze-to0h.onrender.com)
 ---
 
 ### App Interface
